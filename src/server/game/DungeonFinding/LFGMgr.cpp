@@ -805,8 +805,16 @@ namespace lfg
 
     void LFGMgr::ToggleTesting()
     {
-        m_Testing = !m_Testing;
-        ChatHandler(nullptr).SendWorldText(m_Testing ? LANG_DEBUG_LFG_ON : LANG_DEBUG_LFG_OFF);
+        if (sWorld->getBoolConfig(CONFIG_DEBUG_LFG))
+        {
+            m_Testing = true;
+            ChatHandler(nullptr).SendWorldText(LANG_DEBUG_LFG_CONF);
+        }
+        else
+        {
+            m_Testing = !m_Testing;
+            ChatHandler(nullptr).SendWorldText(m_Testing ? LANG_DEBUG_LFG_ON : LANG_DEBUG_LFG_OFF);
+        }
     }
 
     /**
