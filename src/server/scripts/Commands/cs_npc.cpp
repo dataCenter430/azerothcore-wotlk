@@ -642,10 +642,12 @@ public:
             CreatureData const* cData = sObjectMgr->GetCreatureData(lowGuid);
             if (!cData)
                 cData = sObjectMgr->LoadCreatureDataFromDB(lowGuid);
-            if (cData)
-                return HandleNpcInfoCommandShowFromDB(handler, lowGuid, cData);
-            handler->SendErrorMessage(LANG_COMMAND_CREATGUIDNOTFOUND, lowGuid);
-            return false;
+            if (!cData)
+            {
+                handler->SendErrorMessage(LANG_COMMAND_CREATGUIDNOTFOUND, lowGuid);
+                return false;
+            }
+            return HandleNpcInfoCommandShowFromDB(handler, lowGuid, cData);
         }
 
         handler->SendErrorMessage(LANG_SELECT_CREATURE);
