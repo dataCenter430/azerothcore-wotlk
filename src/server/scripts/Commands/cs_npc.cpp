@@ -625,32 +625,28 @@ public:
         Creature* target = handler->getSelectedCreature();
         ObjectGuid::LowType lowGuid = 0;
 
-        if (!target && spawnIdArg)
-        {
-            lowGuid = **spawnIdArg;
+        if (spawnIdArg)
+            lowGuid = *spawnIdArg;
+
+        if (!target && lowGuid)
             target = handler->GetCreatureFromPlayerMapByDbGuid(lowGuid);
-        }
 
         if (target)
-        {
             return HandleNpcInfoCommandShowCreature(handler, target);
-        }
 
-        if (spawnIdArg)
+        if (!lowGuid)
         {
-            lowGuid = **spawnIdArg;
-            CreatureData const* cData = sObjectMgr->GetCreatureData(lowGuid);
-            if (!cData)
-                cData = sObjectMgr->LoadCreatureDataFromDB(lowGuid);
-            if (!cData)
-            {
-                handler->SendErrorMessage(LANG_COMMAND_CREATGUIDNOTFOUND, lowGuid);
-                return false;
-            }
-            return HandleNpcInfoCommandShowFromDB(handler, lowGuid, cData);
+            handler->SendErrorMessage(LANG_SELECT_CREATURE);
+            return false;
         }
 
-        handler->SendErrorMessage(LANG_SELECT_CREATURE);
+        CreatureData const* cData = sObjectMgr->GetCreatureData(lowGuid);
+        if (!cData)
+            cData = sObjectMgr->LoadCreatureDataFromDB(lowGuid);
+        if (cData)
+            return HandleNpcInfoCommandShowFromDB(handler, lowGuid, cData);
+
+        handler->SendErrorMessage(LANG_COMMAND_CREATGUIDNOTFOUND, lowGuid);
         return false;
     }
 
