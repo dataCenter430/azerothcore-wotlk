@@ -731,10 +731,9 @@ public:
             return false;
         }
 
-        ObjectGuid guid = ObjectGuid::Create<HighGuid::Unit>(cData->id1, lowGuid);
         handler->PSendSysMessage("(Not in world - showing DB data)");
         uint32 scriptId = cData->ScriptId ? cData->ScriptId : cInfo->ScriptID;
-        handler->PSendSysMessage(LANG_NPCINFO_CHAR, lowGuid, guid.ToString(), cData->id1,
+        handler->PSendSysMessage(LANG_NPCINFO_CHAR, lowGuid, ObjectGuid::Create<HighGuid::Unit>(cData->id1, lowGuid).ToString(), cData->id1,
             cData->id2, cData->id3, cData->displayid, cData->displayid, cInfo->faction,
             cData->npcflag);
         handler->PSendSysMessage(LANG_NPCINFO_PHASEMASK, cData->phaseMask);
