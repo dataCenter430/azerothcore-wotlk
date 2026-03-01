@@ -1,5 +1,11 @@
 -- DB update 2026_02_27_04 -> 2026_02_27_05
--- Update .npc info help text for optional GUID support
-UPDATE `command` SET `help` = 'Syntax: .npc info [#creature_guid]\r\n\r\nDisplay a list of details for the selected creature, or for the creature with the given GUID if no target is selected.\r\n\r\nWhen a creature is targeted or found in the current map, the list includes:\r\n- GUID, Faction, NPC flags, Entry ID, Model ID,\r\n- Level,\r\n- Health (current/maximum),\r\n- Field flags, dynamic flags, faction template,\r\n- Position information,\r\n- and the creature type, e.g. if the creature is a vendor.\r\n\r\nWhen only a GUID is given and the creature is not in the current map, DB-stored data is shown (spawn ID, entry, phase, position, map, etc.).'
-WHERE `name` = 'npc info';
-
+-- Beacon of Light (53651): restrict proc to Holy Light, Flash of Light, Holy Shock, Lay on Hands
+-- Previously had no SpellFamily filter, allowing unintended heals to transfer:
+-- Glyph of Holy Light (54968), Seal of Light (20167), JoL (20267)
+-- SpellFamilyName=10 (PALADIN) blocks Glyph of Holy Light (GENERIC family)
+-- SpellFamilyMask 0xC0008000/0x00010000 allows only:
+--   Holy Light (635)        Flags[0]=0x80000000
+--   Flash of Light (19750)  Flags[0]=0x40000000
+--   Lay on Hands (633)      Flags[0]=0x00008000
+--   Holy Shock heal (25914) Flags[1]=0x00010000
+UPDATE `spell_proc` SET `SpellFamilyName` = 10, `SpellFamilyMask0` = 0xC0008000, `SpellFamilyMask1` = 0x00010000 WHERE `SpellId` = 53651;
