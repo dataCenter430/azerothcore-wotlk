@@ -1523,6 +1523,14 @@ AllowPlayerCommands = 1
 Command.LookupMaxResults = 0
 
 #
+#    Command.CustomOverridesCore
+#        Description: If enabled, rows in command_custom table override same-named rows in command table.
+#                     When disabled (default), command table always wins for duplicates.
+#        Default:     0 - (command table wins)
+
+Command.CustomOverridesCore = 0
+
+#
 #    Die.Command.Mode
 #        Description: Do not trigger things like loot from .die command.
 #        Default:     1 - (Enabled)

@@ -18,6 +18,7 @@
 #include "ChatCommand.h"
 #include "AccountMgr.h"
 #include "Chat.h"
+#include "Config.h"
 #include "DBCStores.h"
 #include "DatabaseEnv.h"
 #include "Log.h"
@@ -26,6 +27,8 @@
 #include "StringFormat.h"
 #include "Tokenize.h"
 #include "WorldSession.h"
+
+#include <unordered_set>
 
 using ChatSubCommandMap = std::map<std::string_view, Acore::Impl::ChatCommands::ChatCommandNode, StringCompareLessI_T>;
 
@@ -83,6 +86,7 @@ static ChatSubCommandMap COMMAND_MAP;
     InvalidateCommandMap();
     LoadCommandsIntoMap(nullptr, COMMAND_MAP, sScriptMgr->GetChatCommands());
 
+    std::unordered_set<std::string> commandsFromCoreTable;
     if (PreparedQueryResult result = WorldDatabase.Query(WorldDatabase.GetPreparedStatement(WORLD_SEL_COMMANDS)))
     {
         do
@@ -91,6 +95,8 @@ static ChatSubCommandMap COMMAND_MAP;
             std::string_view const name = fields[0].Get<std::string_view>();
             std::string_view const help = fields[2].Get<std::string_view>();
             uint32 const secLevel = fields[1].Get<uint8>();
+
+            commandsFromCoreTable.insert(std::string(name));
 
             ChatCommandNode* cmd = nullptr;
             ChatSubCommandMap* map = &COMMAND_MAP;
@@ -129,6 +135,59 @@ static ChatSubCommandMap COMMAND_MAP;
                 cmd->_help.emplace<std::string>(help);
             else
                 LOG_ERROR("sql.sql", "Table `command` contains legacy help text for command '{}', which uses `acore_string`. Skipped.", name);
+        } while (result->NextRow());
+    }
+
+    bool const customOverridesCore = sConfigMgr->GetOption<bool>("Command.CustomOverridesCore", false);
+    if (PreparedQueryResult result = WorldDatabase.Query(WorldDatabase.GetPreparedStatement(WORLD_SEL_COMMANDS_CUSTOM)))
+    {
+        do
+        {
+            Field* fields = result->Fetch();
+            std::string_view const name = fields[0].Get<std::string_view>();
+            std::string_view const help = fields[2].Get<std::string_view>();
+            uint32 const secLevel = fields[1].Get<uint8>();
+
+            if (!customOverridesCore && commandsFromCoreTable.count(std::string(name)))
+                continue;
+
+            ChatCommandNode* cmd = nullptr;
+            ChatSubCommandMap* map = &COMMAND_MAP;
+
+            for (std::string_view key : Acore::Tokenize(name, COMMAND_DELIMITER, false))
+            {
+                auto it = map->find(key);
+                if (it != map->end())
+                {
+                    cmd = &it->second;
+                    map = &cmd->_subCommands;
+                }
+                else
+                {
+                    LOG_ERROR("sql.sql", "Table `command_custom` contains data for non-existant command '{}'. Skipped.", name);
+                    cmd = nullptr;
+                    break;
+                }
+            }
+
+            if (!cmd)
+                continue;
+
+            if (cmd->_invoker && (cmd->_permission.RequiredLevel != secLevel))
+            {
+                LOG_WARN("sql.sql", "Table `command_custom` has permission {} for '{}' which does not match the core ({}). Overriding.",
+                    secLevel, name, cmd->_permission.RequiredLevel);
+
+                cmd->_permission.RequiredLevel = secLevel;
+            }
+
+            if (std::holds_alternative<std::string>(cmd->_help))
+                LOG_ERROR("sql.sql", "Table `command_custom` contains duplicate data for command '{}'. Skipped.", name);
+
+            if (std::holds_alternative<std::monostate>(cmd->_help))
+                cmd->_help.emplace<std::string>(help);
+            else
+                LOG_ERROR("sql.sql", "Table `command_custom` contains legacy help text for command '{}', which uses `acore_string`. Skipped.", name);
         } while (result->NextRow());
     }
 
